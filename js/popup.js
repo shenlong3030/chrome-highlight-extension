@@ -37,8 +37,10 @@
 		textarea.id = classNames[handlingIndex].concat("-", bgColorCode);
 		textarea.dataset.bgColor = bgColorCode;
 		textarea.value = wordGroupsDict[bgColorCode].words.join(" ");
-		textarea.addEventListener("blur", wordListChangeHandlerFactory(wordGroupsDict));
-		textarea.addEventListener("change", wordListChangeHandlerFactory(wordGroupsDict));
+		$(textarea).on('change keyup paste', function() {
+		    console.log('words change');
+		    wordListChangeHandlerFactory(wordGroupsDict)
+		});
 		handlingIndex++;
 
 		return sectionNode;
