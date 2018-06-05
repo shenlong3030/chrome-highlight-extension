@@ -38,6 +38,7 @@
 		textarea.dataset.bgColor = bgColorCode;
 		textarea.value = wordGroupsDict[bgColorCode].words.join(" ");
 		textarea.addEventListener("blur", wordListChangeHandlerFactory(wordGroupsDict));
+		textarea.addEventListener("change", wordListChangeHandlerFactory(wordGroupsDict));
 		handlingIndex++;
 
 		return sectionNode;
