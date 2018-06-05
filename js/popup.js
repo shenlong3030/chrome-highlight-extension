@@ -37,10 +37,8 @@
 		textarea.id = classNames[handlingIndex].concat("-", bgColorCode);
 		textarea.dataset.bgColor = bgColorCode;
 		textarea.value = wordGroupsDict[bgColorCode].words.join(" ");
-		$(textarea).on('change keyup paste', function() {
-		    console.log('words change');
-		    wordListChangeHandlerFactory(wordGroupsDict)
-		});
+		//textarea.addEventListener("blur", wordListChangeHandlerFactory(wordGroupsDict));
+		$(textarea).on('change keyup paste', wordListChangeHandlerFactory(wordGroupsDict));
 		handlingIndex++;
 
 		return sectionNode;
@@ -94,6 +92,7 @@
 	};
 	var wordListChangeHandlerFactory = function (wordGroupsDict) {
 		return function (event) {
+			console.log('words change');
 			var groupName = event.target.dataset.bgColor;
 			var wordGroup = wordGroupsDict[groupName];
 			wordGroup.words = event.target.value.match(/[^\s]+/g) || [];
