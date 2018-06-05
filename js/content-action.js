@@ -10,58 +10,14 @@
 		return style.sheet;
 	})();
 
+	////////////////////////////////////////////////
 	// highlight word in DOM (textnode only)
-	var highlightWordInTextNodeOnly = function (word, bgColorCode) {
-
-		// skip empty word
-		if (word == null || word.length === 0) return;
-
-		// DOM tree walker
-		var wordRegex = new RegExp(word, "gi");
-		var treeWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
-			acceptNode: function (node) {
-				var result = NodeFilter.FILTER_SKIP;
-				if (wordRegex.test(node.nodeValue)) result = NodeFilter.FILTER_ACCEPT;
-				return result;
-			}
-		}, false);
-
-		// get textnode
-		var skipTagName = {
-			"NOSCRIPT": true,
-			"SCRIPT": true,
-			"STYLE": true
-		};
-		var nodeList = [];
-		while(treeWalker.nextNode()) {
-			if (!skipTagName[treeWalker.currentNode.parentNode.tagName]) {
-				nodeList.push(treeWalker.currentNode);
-			}
-		}
-
-		// highlight all filtered textnode
-		nodeList.forEach(function (n) {
-			var rangeList = [];
-
-			// find sub-string ranges
-			var startingIndex = 0;
-			do {
-				// console.log(word, startingIndex, n.parentNode, n.textContent);
-				startingIndex = n.textContent.indexOf(word, startingIndex + 1);
-				if (startingIndex !== -1) {
-					var wordRange = document.createRange();
-					wordRange.setStart(n, startingIndex);
-					wordRange.setEnd(n, startingIndex + word.length);
-					rangeList.push(wordRange);
-				}
-			} while (startingIndex !== -1);
-
-			// highlight all ranges
-			rangeList.forEach(function (r) {
-				highlightRange(r, bgColorCode);
-			});
-		});
+	var highlightWordByJquery = function (word, bgColorCode) {
+		var cssClass = "chrome-extension-highlight-".concat(bgColorCode);
+		//$('body').highlight(word, cssClass);
 	};
+	////////////////////////////////////////////////
+
 	// highlight word in DOM (keyword can be across multi tag)
 	var highlightWordAcrossNode = function (word, bgColorCode) {
 
@@ -76,7 +32,7 @@
 				// don't modify the range here, cursor in find() will be corrupted
 			} while (window.find(word, false, false, false, false, false, false));
 			// reset scroll position, window.find() will select the last word...
-			window.scrollTo(0, 0);
+			//window.scrollTo(0, 0);
 		} else {
 			console.log("[highlightWordAcrossNode] nothing found", word, bgColorCode, document.title);
 		}
@@ -114,7 +70,7 @@
 			// alternative: https://github.com/timdown/rangy/wiki/Highlighter-Module
 		} else {
 			console.log("window.find() function not exists, only textnode will be searched");
-			highlightWordFunction = highlightWordInTextNodeOnly;
+			highlightWordFunction = highlightWordByJquery;
 		}
 
 		// for each group, highlight all its words
@@ -127,25 +83,38 @@
 		});
 	};
 
-	// get words from storage
-	chrome.storage.sync.get('wordGroupsDict', function (wordGroupsDict) {
+	// watch if any table change its content (often by ajax), then re-highlight words
+	var observer = new MutationObserver(function(mutations) {
+	    chrome.storage.sync.get('wordGroupsDict', function (wordGroupsDict) {
+			if (!wordGroupsDict.wordGroupsDict) return;
+			else wordGroupsDict = wordGroupsDict.wordGroupsDict;
+		 	highlightAllWords(wordGroupsDict);
+		});
+	});
+	$("table").each(function(){
+	  	observer.observe($(this)[0], { childList: true});
+	});
 
-		if (!wordGroupsDict.wordGroupsDict) return;
-		else wordGroupsDict = wordGroupsDict.wordGroupsDict;
+	$(window).load(function(){
+		// get words from storage
+		chrome.storage.sync.get('wordGroupsDict', function (wordGroupsDict) {
 
-		// highlightAllWords(wordGroupsDict);
-		// body may not loaded... hard-code some delay
-		setTimeout(highlightAllWords, 500, wordGroupsDict);
+			if (!wordGroupsDict.wordGroupsDict) return;
+			else wordGroupsDict = wordGroupsDict.wordGroupsDict;
+		 	highlightAllWords(wordGroupsDict);
+			// body may not loaded... hard-code some delay
+			// setTimeout(highlightAllWords, 500, wordGroupsDict);
 
-		// may use observer to due with it
-		// var observer = new MutationObserver(function(mutations) {
-		// 	mutations.forEach(function(mutation) {
-		// 		console.log(mutation);
-		// 	});
-		// })
-		// var minConfig = { attributes: true, childList: true, characterData: true };
-		// minConfig.subtree = true;
-		// observer.observe(document.body, minConfig);
+			// may use observer to due with it
+			// var observer = new MutationObserver(function(mutations) {
+			// 	mutations.forEach(function(mutation) {
+			// 		console.log(mutation);
+			// 	});
+			// })
+			// var minConfig = { attributes: true, childList: true, characterData: true };
+			// minConfig.subtree = true;
+			// observer.observe(document.body, minConfig);
+		});
 	});
 
 	// on word list change
