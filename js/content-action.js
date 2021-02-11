@@ -14,6 +14,9 @@
 	// highlight word in DOM (textnode only)
 	var highlightWordByJquery = function (word, bgColorCode) {
 		var cssClass = "chrome-extension-highlight-".concat(bgColorCode);
+
+		// researching 
+
 		//$('body').highlight(word, cssClass);
 	};
 	////////////////////////////////////////////////
@@ -83,51 +86,50 @@
 		});
 	};
 
-	// watch if any table change its content (often by ajax), then re-highlight words
-	var observer = new MutationObserver(function(mutations) {
-	    chrome.storage.sync.get('wordGroupsDict', function (wordGroupsDict) {
-			if (!wordGroupsDict.wordGroupsDict) return;
-			else wordGroupsDict = wordGroupsDict.wordGroupsDict;
-		 	highlightAllWords(wordGroupsDict);
-		});
-	});
-	$("table").each(function(){
-	  	observer.observe($(this)[0], { childList: true});
-	});
-
-	$(window).load(function(){
-		// get words from storage
-		chrome.storage.sync.get('wordGroupsDict', function (wordGroupsDict) {
-
-			if (!wordGroupsDict.wordGroupsDict) return;
-			else wordGroupsDict = wordGroupsDict.wordGroupsDict;
-		 	highlightAllWords(wordGroupsDict);
-			// body may not loaded... hard-code some delay
-			// setTimeout(highlightAllWords, 500, wordGroupsDict);
-
-			// may use observer to due with it
-			// var observer = new MutationObserver(function(mutations) {
-			// 	mutations.forEach(function(mutation) {
-			// 		console.log(mutation);
-			// 	});
-			// })
-			// var minConfig = { attributes: true, childList: true, characterData: true };
-			// minConfig.subtree = true;
-			// observer.observe(document.body, minConfig);
-		});
-	});
-
-	// on word list change
-	chrome.runtime.onMessage.addListener(function (messageBody, sender, sendResponse) {
-
-		// console.log(sender.tab ? "from a content script:" + sender.tab.url : "from the extension");
-
+	var removeAllHighlight = function (){
 		// remove all highlight first
 		[].slice.call(document.getElementsByClassName("chrome-extension-highlight")).forEach(function (e) {
 			var parentNode = e.parentNode;
 			while(e.firstChild) parentNode.insertBefore(e.firstChild, e);
 			parentNode.removeChild(e);
 		});
+	};
+
+	$(window).load(function(){
+		// watch if any table change its content (often by ajax), then re-highlight words
+		var tableObserver = new MutationObserver(function(mutations) {
+		    chrome.storage.sync.get('wordGroupsDict', function (wordGroupsDict) {
+				if (!wordGroupsDict.wordGroupsDict) return;
+				else wordGroupsDict = wordGroupsDict.wordGroupsDict;
+			 	
+				removeAllHighlight();
+
+				// do highlight
+			 	highlightAllWords(wordGroupsDict);
+			});
+		});
+		
+		setTimeout(function(){ // wait 2s after page load
+			// get words from storage
+			chrome.storage.sync.get('wordGroupsDict', function (wordGroupsDict) {
+				if (!wordGroupsDict.wordGroupsDict) return;
+				else wordGroupsDict = wordGroupsDict.wordGroupsDict;
+			 	
+			 	highlightAllWords(wordGroupsDict);
+			});
+
+			//handle change event of all table
+			$("table").each(function(){
+			  	tableObserver.observe($(this)[0], { childList: true});
+			});
+		}, 2000);
+	});
+
+	// on word list change
+	chrome.runtime.onMessage.addListener(function (messageBody, sender, sendResponse) {
+		// console.log(sender.tab ? "from a content script:" + sender.tab.url : "from the extension");
+
+		removeAllHighlight();
 
 		highlightAllWords(messageBody);
 		if (sendResponse) sendResponse({content: "highlight done!"});
